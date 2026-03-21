@@ -173,11 +173,15 @@
     front.classList.add("front");
     front.setAttribute("href", "#");
     back.classList.add("back");
-    back.classList.add("card-" + card.value);
     if (card.isMatchingCard) {
       back.classList.add("matching");
     }
     back.setAttribute("href", "#");
+
+    var cardNumber = document.createElement("span");
+    cardNumber.classList.add("card-number");
+    cardNumber.textContent = card.value;
+    back.appendChild(cardNumber);
 
     flipper.appendChild(front);
     flipper.appendChild(back);

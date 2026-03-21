@@ -233,69 +233,17 @@ body {
   transform: rotateY(-180deg);
   background-color: #fff;
   border-radius: 5%;
-  background-position:50% 50%;
-  background-repeat: no-repeat;
-  background-size: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.back.card-1 {
-  background-image: url(../images/fruits/apple.jpg);
+.card-number {
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  font-size: 6vw;
+  color: #0061a8;
+  text-decoration: none;
+  user-select: none;
+  pointer-events: none;
 }
-.back.card-2 {
-  background-image: url(../images/fruits/fig.jpg);
-}
-.back.card-3 {
-  background-image: url(../images/fruits/grape.jpg);
-}
-.back.card-4 {
-  background-image: url(../images/fruits/kiwi.jpg);
-}
-.back.card-5 {
-  background-image: url(../images/fruits/lemon.jpg);
-}
-.back.card-6 {
-  background-image: url(../images/fruits/lime.jpg);
-}
-.back.card-7 {
-  background-image: url(../images/fruits/mango.jpg);
-}
-.back.card-8 {
-  background-image: url(../images/fruits/melon.jpg);
-}
-.back.card-9 {
-  background-image: url(../images/fruits/orange.jpg);
-}
-.back.card-10 {
-  background-image: url(../images/fruits/peach.jpg);
-}
-.back.card-11 {
-  background-image: url(../images/fruits/pear.jpg);
-}
-.back.card-12 {
-  background-image: url(../images/fruits/pinapple.jpg);
-}
-.back.card-13 {
-  background-image: url(../images/fruits/plum.jpg);
-}
-.back.card-14 {
-  background-image: url(../images/fruits/raspberry.jpg);
-}
-.back.card-15 {
-  background-image: url(../images/fruits/strawberry.jpg);
-}
-
-/** Matching Cards **/
-/**
- * If you wish to have custom matching images, you can do so
- * by leveraging the 'matching' class which is added to one
- * of the matching cards. See the example below.
- *
- * .back.card-1 {
- *   background-image: url(../images/fruits/apple_1.jpg);
- * }
- *
- * .back.matching.card-1 {
- *   background-image: url(../images/fruits/apple_2.jpg);
- * }
- *
- */
