@@ -2,41 +2,66 @@
  * BrowserInterface.js
  * Session flow: Easy → Medium → Hard → [Rule Change] → Medium (Parity)
  */
-(function($) {
-
+(function ($) {
   var nonMatchingCardTime = 1000;
   var isProcessing = false;
 
   var SESSION_STAGES = [
-    { rows: 2, columns: 3, rule: 'identical', label: 'Round 1 — Easy',   revealTime: 3000 },
-    { rows: 3, columns: 4, rule: 'identical', label: 'Round 2 — Medium', revealTime: 4000 },
-    { rows: 4, columns: 5, rule: 'identical', label: 'Round 3 — Hard',   revealTime: 5000 },
-    { rows: 4, columns: 5, rule: 'even_odd',  label: 'Round 4 — Parity', revealTime: 4000 },
+    {
+      rows: 2,
+      columns: 3,
+      rule: "identical",
+      label: "Round 1 — Easy",
+      revealTime: 1500,
+    },
+    {
+      rows: 3,
+      columns: 4,
+      rule: "identical",
+      label: "Round 2 — Medium",
+      revealTime: 2500,
+    },
+    {
+      rows: 4,
+      columns: 5,
+      rule: "identical",
+      label: "Round 3 — Hard",
+      revealTime: 3500,
+    },
+    {
+      rows: 4,
+      columns: 5,
+      rule: "even_odd",
+      label: "Round 4 — Parity",
+      revealTime: 3000,
+    },
   ];
 
   var currentStageIndex = -1;
   var pendingAction = null;
 
   // DOM refs
-  var startModal      = document.getElementById('memory--start-modal');
-  var transitionModal = document.getElementById('memory--transition-modal');
-  var transitionTitle = document.getElementById('memory--transition-title');
-  var transitionMsg   = document.getElementById('memory--transition-message');
-  var transitionBtn   = document.getElementById('memory--transition-btn');
-  var stageLabel      = document.getElementById('memory--stage-label');
+  var startModal = document.getElementById("memory--start-modal");
+  var transitionModal = document.getElementById("memory--transition-modal");
+  var transitionTitle = document.getElementById("memory--transition-title");
+  var transitionMsg = document.getElementById("memory--transition-message");
+  var transitionBtn = document.getElementById("memory--transition-btn");
+  var stageLabel = document.getElementById("memory--stage-label");
 
   // ── Start button ────────────────────────────────────────────────────────────
-  document.getElementById('memory--start-btn').addEventListener('click', function(e) {
-    e.preventDefault();
-    startModal.classList.remove('show');
-    currentStageIndex = 0;
-    startCurrentStage();
-  });
+  document
+    .getElementById("memory--start-btn")
+    .addEventListener("click", function (e) {
+      e.preventDefault();
+      startModal.classList.remove("show");
+      currentStageIndex = 0;
+      startCurrentStage();
+    });
 
   // ── Transition / continue button ─────────────────────────────────────────────
-  transitionBtn.addEventListener('click', function(e) {
+  transitionBtn.addEventListener("click", function (e) {
     e.preventDefault();
-    transitionModal.classList.remove('show');
+    transitionModal.classList.remove("show");
     if (pendingAction) {
       var action = pendingAction;
       pendingAction = null;
@@ -53,14 +78,14 @@
 
     // Timed reveal: show all cards face-up briefly, then hide them
     isProcessing = true;
-    var childNodes = document.getElementById('memory--cards').childNodes;
+    var childNodes = document.getElementById("memory--cards").childNodes;
     for (var i = 0; i < childNodes.length; i++) {
-      childNodes[i].classList.add('clicked');
+      childNodes[i].classList.add("clicked");
     }
-    setTimeout(function() {
-      var nodes = document.getElementById('memory--cards').childNodes;
+    setTimeout(function () {
+      var nodes = document.getElementById("memory--cards").childNodes;
       for (var i = 0; i < nodes.length; i++) {
-        nodes[i].classList.remove('clicked');
+        nodes[i].classList.remove("clicked");
       }
       isProcessing = false;
     }, stage.revealTime);
@@ -68,15 +93,15 @@
 
   function showTransition(title, message, btnText, onContinue) {
     transitionTitle.textContent = title;
-    transitionMsg.textContent   = message;
+    transitionMsg.textContent = message;
     if (btnText) {
-      transitionBtn.textContent    = btnText;
-      transitionBtn.style.display  = '';
+      transitionBtn.textContent = btnText;
+      transitionBtn.style.display = "";
     } else {
-      transitionBtn.style.display  = 'none';
+      transitionBtn.style.display = "none";
     }
     pendingAction = onContinue;
-    transitionModal.classList.add('show');
+    transitionModal.classList.add("show");
   }
 
   function onStageComplete() {
@@ -85,82 +110,83 @@
     if (nextIndex >= SESSION_STAGES.length) {
       // All rounds finished
       showTransition(
-        'Session Complete!',
-        'All rounds are finished. Thank you for participating.',
+        "Session Complete!",
+        "All rounds are finished. Thank you for participating.",
         null,
-        null
+        null,
       );
-      stageLabel.textContent = '';
+      stageLabel.textContent = "";
       return;
     }
 
     if (nextIndex === 3) {
       // Rule-change screen before the parity round
       showTransition(
-        'Rule Change!',
-        'Match EVEN numbers with EVEN and ODD numbers with ODD — but matching two identical numbers is WRONG, even if they share parity.',
-        'Got it — let\'s go!',
-        function() {
+        "Rule Change!",
+        "Match EVEN numbers with EVEN and ODD numbers with ODD — but matching two identical numbers is WRONG, even if they share parity.",
+        "Got it — let's go!",
+        function () {
           currentStageIndex = 3;
           startCurrentStage();
-        }
+        },
       );
     } else {
       showTransition(
-        'Round Complete!',
-        'Well done! Get ready for the next round.',
-        'Continue',
-        function() {
+        "Round Complete!",
+        "Well done! Get ready for the next round.",
+        "Continue",
+        function () {
           currentStageIndex = nextIndex;
           startCurrentStage();
-        }
+        },
       );
     }
   }
 
   // ── Card click handler ───────────────────────────────────────────────────────
-  var handleFlipCard = function(event) {
+  var handleFlipCard = function (event) {
     event.preventDefault();
     if (isProcessing) return;
 
     var status = $.play(this.index);
 
     if (status.code !== 0) {
-      this.classList.toggle('clicked');
+      this.classList.toggle("clicked");
     }
 
     if (status.code === 3) {
       isProcessing = true;
       var args = status.args;
-      setTimeout(function() {
-        var childNodes = document.getElementById('memory--cards').childNodes;
-        childNodes[args[0]].classList.remove('clicked');
-        childNodes[args[1]].classList.remove('clicked');
+      setTimeout(function () {
+        var childNodes = document.getElementById("memory--cards").childNodes;
+        childNodes[args[0]].classList.remove("clicked");
+        childNodes[args[1]].classList.remove("clicked");
         isProcessing = false;
       }, nonMatchingCardTime);
-
     } else if (status.code === 4) {
       isProcessing = true;
-      setTimeout(function() {
+      setTimeout(function () {
         onStageComplete();
       }, 500);
     }
   };
 
   // ── Layout builders ──────────────────────────────────────────────────────────
-  var buildLayout = function(cards, rows, columns) {
+  var buildLayout = function (cards, rows, columns) {
     if (!cards.length) return;
 
-    var memoryCards = document.getElementById('memory--cards');
+    var memoryCards = document.getElementById("memory--cards");
 
-    var cardMaxWidth          = document.getElementById('memory--app-container').offsetWidth / columns;
+    var cardMaxWidth =
+      document.getElementById("memory--app-container").offsetWidth / columns;
     var cardHeightForMaxWidth = cardMaxWidth * (3 / 4);
-    var cardMaxHeight         = document.getElementById('memory--app-container').offsetHeight / rows;
+    var cardMaxHeight =
+      document.getElementById("memory--app-container").offsetHeight / rows;
     var cardWidthForMaxHeight = cardMaxHeight * (4 / 3);
 
     // Remove existing cards and their listeners
     while (memoryCards.firstChild) {
-      memoryCards.firstChild.removeEventListener('click', handleFlipCard);
+      memoryCards.firstChild.removeEventListener("click", handleFlipCard);
       memoryCards.removeChild(memoryCards.firstChild);
     }
 
@@ -168,52 +194,64 @@
     for (var i = 0; i < rows; i++) {
       for (var j = 0; j < columns; j++) {
         memoryCards.appendChild(
-          buildCardNode(index, cards[index], (100 / columns) + '%', (100 / rows) + '%')
+          buildCardNode(
+            index,
+            cards[index],
+            100 / columns + "%",
+            100 / rows + "%",
+          ),
         );
         index++;
       }
     }
 
     if (cardMaxHeight > cardHeightForMaxWidth) {
-      memoryCards.style.height = (cardHeightForMaxWidth * rows) + 'px';
-      memoryCards.style.width  = document.getElementById('memory--app-container').offsetWidth + 'px';
-      memoryCards.style.top    = ((cardMaxHeight * rows - cardHeightForMaxWidth * rows) / 2) + 'px';
+      memoryCards.style.height = cardHeightForMaxWidth * rows + "px";
+      memoryCards.style.width =
+        document.getElementById("memory--app-container").offsetWidth + "px";
+      memoryCards.style.top =
+        (cardMaxHeight * rows - cardHeightForMaxWidth * rows) / 2 + "px";
     } else {
-      memoryCards.style.width  = (cardWidthForMaxHeight * columns) + 'px';
-      memoryCards.style.height = document.getElementById('memory--app-container').offsetHeight + 'px';
-      memoryCards.style.top    = 0;
+      memoryCards.style.width = cardWidthForMaxHeight * columns + "px";
+      memoryCards.style.height =
+        document.getElementById("memory--app-container").offsetHeight + "px";
+      memoryCards.style.top = 0;
     }
   };
 
-  window.addEventListener('resize', function() {
-    if (currentStageIndex >= 0) {
-      buildLayout($.cards, $.settings.rows, $.settings.columns);
-    }
-  }, true);
+  window.addEventListener(
+    "resize",
+    function () {
+      if (currentStageIndex >= 0) {
+        buildLayout($.cards, $.settings.rows, $.settings.columns);
+      }
+    },
+    true,
+  );
 
-  var buildCardNode = function(index, card, width, height) {
-    var flipContainer = document.createElement('li');
-    var flipper       = document.createElement('div');
-    var front         = document.createElement('a');
-    var back          = document.createElement('a');
+  var buildCardNode = function (index, card, width, height) {
+    var flipContainer = document.createElement("li");
+    var flipper = document.createElement("div");
+    var front = document.createElement("a");
+    var back = document.createElement("a");
 
-    flipContainer.index        = index;
-    flipContainer.style.width  = width;
+    flipContainer.index = index;
+    flipContainer.style.width = width;
     flipContainer.style.height = height;
-    flipContainer.classList.add('flip-container');
-    if (card.isRevealed) flipContainer.classList.add('clicked');
+    flipContainer.classList.add("flip-container");
+    if (card.isRevealed) flipContainer.classList.add("clicked");
 
-    flipper.classList.add('flipper');
+    flipper.classList.add("flipper");
 
-    front.classList.add('front');
-    front.setAttribute('href', '#');
+    front.classList.add("front");
+    front.setAttribute("href", "#");
 
-    back.classList.add('back');
-    if (card.isMatchingCard) back.classList.add('matching');
-    back.setAttribute('href', '#');
+    back.classList.add("back");
+    if (card.isMatchingCard) back.classList.add("matching");
+    back.setAttribute("href", "#");
 
-    var cardNumber = document.createElement('span');
-    cardNumber.classList.add('card-number');
+    var cardNumber = document.createElement("span");
+    cardNumber.classList.add("card-number");
     cardNumber.textContent = card.value;
     back.appendChild(cardNumber);
 
@@ -221,9 +259,8 @@
     flipper.appendChild(back);
     flipContainer.appendChild(flipper);
 
-    flipContainer.addEventListener('click', handleFlipCard);
+    flipContainer.addEventListener("click", handleFlipCard);
 
     return flipContainer;
   };
-
 })(MemoryGame);
