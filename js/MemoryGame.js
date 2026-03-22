@@ -75,18 +75,35 @@ var MemoryGame = {
   },
 
   /**
-   * Create cards for parity matching: all values unique,
-   * half are even and half are odd so the game is always completable.
+   * Create cards for parity matching.
+   * Half the cards are even, half are odd.
+   * A small number of values are deliberately duplicated ("traps") so that
+   * players tempted to use the old identical-match rule will fail — those
+   * attempts are perseveration errors and are measured by the event log.
+   * A match is valid only when two cards share parity AND have different values.
    */
   createParityCards: function() {
     var totalCards = this.settings.columns * this.settings.rows;
-    var half = totalCards / 2;
+    var half = totalCards / 2; // even cards = odd cards = half
 
-    var evensPool = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20];
-    var oddsPool  = [1, 3, 5, 7,  9, 11, 13, 15, 17, 19];
+    var evensPool = this.shuffleArray([2, 4, 6, 8, 10, 12, 14, 16, 18, 20].slice());
+    var oddsPool  = this.shuffleArray([1, 3, 5, 7,  9, 11, 13, 15, 17, 19].slice());
 
-    var evens = this.shuffleArray(evensPool.slice()).slice(0, half);
-    var odds  = this.shuffleArray(oddsPool.slice()).slice(0, half);
+    // Start with 'half' unique values for each parity
+    var evens = evensPool.slice(0, half);
+    var odds  = oddsPool.slice(0, half);
+
+    // Introduce traps: duplicate some values so the identical-match temptation exists.
+    // Replace the last numTraps entries with copies of the first numTraps values.
+    var numTraps = Math.max(1, Math.floor(half / 5)); // e.g. 2 for half=10
+    for (var i = 0; i < numTraps; i++) {
+      evens[half - 1 - i] = evens[i];
+      odds[half - 1 - i]  = odds[i];
+    }
+
+    // Shuffle again so traps are at random positions
+    evens = this.shuffleArray(evens);
+    odds  = this.shuffleArray(odds);
 
     var allValues = evens.concat(odds);
     var cards = [];
@@ -170,8 +187,9 @@ var MemoryGame = {
       var v0 = this.cards[idx0].value;
       var v1 = this.cards[idx1].value;
 
+      // even_odd: same parity AND different value (identical matches are wrong)
       var isMatch = (this.currentRule === 'even_odd')
-        ? (v0 % 2 === v1 % 2)
+        ? (v0 % 2 === v1 % 2 && v0 !== v1)
         : (v0 === v1);
 
       if (!isMatch) {

@@ -8,10 +8,10 @@
   var isProcessing = false;
 
   var SESSION_STAGES = [
-    { rows: 2, columns: 3, rule: 'identical', label: 'Round 1 — Easy'   },
-    { rows: 3, columns: 4, rule: 'identical', label: 'Round 2 — Medium' },
-    { rows: 4, columns: 5, rule: 'identical', label: 'Round 3 — Hard'   },
-    { rows: 3, columns: 4, rule: 'even_odd',  label: 'Round 4 — Parity' },
+    { rows: 2, columns: 3, rule: 'identical', label: 'Round 1 — Easy',   revealTime: 3000 },
+    { rows: 3, columns: 4, rule: 'identical', label: 'Round 2 — Medium', revealTime: 4000 },
+    { rows: 4, columns: 5, rule: 'identical', label: 'Round 3 — Hard',   revealTime: 5000 },
+    { rows: 4, columns: 5, rule: 'even_odd',  label: 'Round 4 — Parity', revealTime: 4000 },
   ];
 
   var currentStageIndex = -1;
@@ -50,7 +50,20 @@
     stageLabel.textContent = stage.label;
     $.initialize(stage.rows, stage.columns, stage.rule);
     buildLayout($.cards, $.settings.rows, $.settings.columns);
-    isProcessing = false;
+
+    // Timed reveal: show all cards face-up briefly, then hide them
+    isProcessing = true;
+    var childNodes = document.getElementById('memory--cards').childNodes;
+    for (var i = 0; i < childNodes.length; i++) {
+      childNodes[i].classList.add('clicked');
+    }
+    setTimeout(function() {
+      var nodes = document.getElementById('memory--cards').childNodes;
+      for (var i = 0; i < nodes.length; i++) {
+        nodes[i].classList.remove('clicked');
+      }
+      isProcessing = false;
+    }, stage.revealTime);
   }
 
   function showTransition(title, message, btnText, onContinue) {
@@ -85,7 +98,7 @@
       // Rule-change screen before the parity round
       showTransition(
         'Rule Change!',
-        'From now on, match EVEN numbers with EVEN and ODD numbers with ODD. No two cards will share the same number.',
+        'Match EVEN numbers with EVEN and ODD numbers with ODD — but matching two identical numbers is WRONG, even if they share parity.',
         'Got it — let\'s go!',
         function() {
           currentStageIndex = 3;
