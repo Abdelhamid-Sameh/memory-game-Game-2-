@@ -1,73 +1,54 @@
 /**
- * Author: Maximo Mena
- * GitHub: mmenavas
- * Twitter: @menamaximo
- * Project: Memory Workout
- * Description: This is a memory game written in pure JavaScript.
- * The goal is to match pairs of cards in the least
- * number of matching attempts.
+ * Author: Maximo Mena (modified for thesis project)
+ * Project: Number Matcher — Memory Game (Game 2)
  */
 
-/**
- * @TODO
- * - Implement support for multiple players.
- */
-
-/**
- * @namespace The main application object
- */
 var MemoryGame = {
 
   settings: {
     rows: 2,
     columns: 3,
-    images: 3, // Number of images
   },
 
-  // Properties that indicate state
-  cards: [], // Array of MemoryGame.Card objects
-  attempts: 0, // How many pairs of cards were flipped before completing game
-  mistakes: 0, // How many pairs of cards were flipped before completing game
+  cards: [],
+  attempts: 0,
+  mistakes: 0,
   isGameOver: false,
+  currentRule: 'identical', // 'identical' or 'even_odd'
+
+  // play() state — stored here so initialize() can reset them between stages
+  _cardSelection: [],
+  _revealedCards: 0,
+  _revealedValues: [],
 
   /**
-   * Modify default settings to start a new game.
-   * Both parameters need integers greater than one, and
-   * at least one them  needs to be an even number.
-   *
-   * @param {number} columns
+   * Start a new stage.
    * @param {number} rows
-   * @param {number} number of card images
-   * @return {array} shuffled cards
+   * @param {number} columns
+   * @param {string} rule  'identical' | 'even_odd'
    */
-  initialize : function(rows, columns, images) {
-    var validOptions = true;
-
-    // Validate arguments
+  initialize: function(rows, columns, rule) {
     if (!(typeof columns === 'number' && (columns % 1) === 0 && columns > 1) ||
-        !(typeof rows === 'number' && (rows % 1) === 0) && rows > 1) {
-      validOptions = false;
-      throw {
-        name: "invalidInteger",
-        message: "Both rows and columns need to be integers greater than 1."
-      };
+        !(typeof rows === 'number' && (rows % 1) === 0 && rows > 1)) {
+      throw { name: 'invalidInteger', message: 'Rows and columns must be integers > 1.' };
     }
-
     if ((columns * rows) % 2 !== 0) {
-      validOptions = false;
-      throw {
-        name: "oddNumber",
-        message: "Either rows or columns needs to be an even number."
-      };
+      throw { name: 'oddNumber', message: 'The total number of cards must be even.' };
     }
 
-    if (validOptions) {
-      this.settings.rows = rows;
-      this.settings.columns = columns;
-      this.settings.images = images;
-      this.attempts = 0;
-      this.mistakes = 0;
-      this.isGameOver = false;
+    this.settings.rows = rows;
+    this.settings.columns = columns;
+    this.currentRule = rule || 'identical';
+    this.attempts = 0;
+    this.mistakes = 0;
+    this.isGameOver = false;
+    this._cardSelection = [];
+    this._revealedCards = 0;
+    this._revealedValues = [];
+
+    if (this.currentRule === 'even_odd') {
+      this.createParityCards().shuffleCards();
+    } else {
       this.createCards().shuffleCards();
     }
 
@@ -75,179 +56,167 @@ var MemoryGame = {
   },
 
   /**
-   * Create an array of sorted cards
-   *
-   * @return Reference to self object
+   * Create matched pairs of cards with identical values.
+   * Each pair shares the same randomly chosen integer (1–20).
    */
   createCards: function() {
     var cards = [];
-    var values = [];
-    var count = 0;
-    var maxValue = (this.settings.columns * this.settings.rows) / 2;
-    while (count < maxValue) {
-      // Next random card value
-      var value = this.getRandomCardValue(values);
-      // Card A
-      cards[2 * count] = new this.Card(value);
-      // Card B (matching card)
-      cards[2 * count + 1] = new this.Card(value, true);
-      count++;
+    var usedValues = [];
+    var numPairs = (this.settings.columns * this.settings.rows) / 2;
+
+    for (var i = 0; i < numPairs; i++) {
+      var value = this.getRandomUniqueValue(usedValues, 20);
+      cards[2 * i]     = new this.Card(value);
+      cards[2 * i + 1] = new this.Card(value, true);
     }
 
     this.cards = cards;
-
     return this;
   },
 
   /**
-   * Get a random value between 1 and this.settings.images that is not
-   * already in 'values'.
-   *
-   * @param {array} values List of random values already in use.
-   * @return {number}
+   * Create cards for parity matching: all values unique,
+   * half are even and half are odd so the game is always completable.
    */
-  getRandomCardValue: function(values) {
-    var valid = false;
-    var randomValue = 0;
+  createParityCards: function() {
+    var totalCards = this.settings.columns * this.settings.rows;
+    var half = totalCards / 2;
 
-    while (!valid) {
-      randomValue = Math.floor(Math.random() * this.settings.images) + 1;
-      var found = false;
-      for (var index = 0; index < values.length; index++) {
-        if (randomValue === values[index]) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        valid = true;
-        values.push(randomValue); // Purposely modify the array parameter.
-      }
+    var evensPool = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20];
+    var oddsPool  = [1, 3, 5, 7,  9, 11, 13, 15, 17, 19];
+
+    var evens = this.shuffleArray(evensPool.slice()).slice(0, half);
+    var odds  = this.shuffleArray(oddsPool.slice()).slice(0, half);
+
+    var allValues = evens.concat(odds);
+    var cards = [];
+    for (var i = 0; i < allValues.length; i++) {
+      cards.push(new this.Card(allValues[i]));
     }
 
-    return randomValue;
+    this.cards = cards;
+    return this;
   },
 
   /**
-   * Rearrange elements in cards array
-   *
-   * @return Reference to self object
+   * Return a random integer in [1, max] not already in usedValues.
+   */
+  getRandomUniqueValue: function(usedValues, max) {
+    var value;
+    do {
+      value = Math.floor(Math.random() * max) + 1;
+    } while (usedValues.indexOf(value) !== -1);
+    usedValues.push(value);
+    return value;
+  },
+
+  /**
+   * Fisher-Yates shuffle in place; returns the array.
+   */
+  shuffleArray: function(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  },
+
+  /**
+   * Rearrange elements in cards array (original algorithm preserved).
    */
   shuffleCards: function() {
     var cards = this.cards;
     var shuffledCards = [];
-    var randomIndex = 0;
 
-    // Shuffle cards
     while (shuffledCards.length < cards.length) {
-
-      // Random value between 0 and cards.length
-      randomIndex  = Math.floor(Math.random() * cards.length);
-
-      // If element isn't false, add element to shuffled deck
-      if(cards[randomIndex]) {
-
-        // Add new element to shuffle deck
+      var randomIndex = Math.floor(Math.random() * cards.length);
+      if (cards[randomIndex]) {
         shuffledCards.push(cards[randomIndex]);
-
-        // Set element to false to avoid being reused
         cards[randomIndex] = false;
       }
-
     }
 
     this.cards = shuffledCards;
-
     return this;
   },
 
   /**
-   * A player gets to flip two cards. This function returns information
-   * about what happens when a card is selected
+   * Process a card flip at the given index.
+   * Matching logic respects this.currentRule.
    *
-   * @param {number} Index of card selected by player
-   * @return {object} {code: number, message: string, args: array or number}
+   * Status codes:
+   *   0 — card already revealed
+   *   1 — first card of pair flipped
+   *   2 — match
+   *   3 — no match (args: [idx0, idx1])
+   *   4 — stage complete (all pairs found)
    */
-  play: (function() {
-    var cardSelection = [];
-    var revealedCards = 0;
-    var revealedValues = [];
+  play: function(index) {
+    var status = {};
 
-    return function(index) {
-      var status = {};
-      var value = this.cards[index].value;
-
-      if (!this.cards[index].isRevealed) {
-        this.cards[index].reveal();
-        cardSelection.push(index);
-        if (cardSelection.length == 2) {
-          this.attempts++;
-          if (this.cards[cardSelection[0]].value !=
-              this.cards[cardSelection[1]].value) {
-            // No match
-            this.cards[cardSelection[0]].conceal();
-            this.cards[cardSelection[1]].conceal();
-            /**
-             * Algorithm to determine a mistake.
-             * Check if the pair of at least
-             * one card has been revealed before
-             *
-             * indexOf return -1 if value is not found
-             */
-            var isMistake = false;
-
-            if (revealedValues.indexOf(this.cards[cardSelection[0]].value) === -1) {
-              revealedValues.push(this.cards[cardSelection[0]].value);
-            }
-            else {
-              isMistake = true;
-            }
-
-            if (revealedValues.indexOf(this.cards[cardSelection[1]].value) === -1) {
-              revealedValues.push(this.cards[cardSelection[1]].value);
-            }
-
-            if (isMistake) {
-              this.mistakes++;
-            }
-
-            revealedValues.push(this.cards[cardSelection[0]].value);
-
-            status.code = 3,
-            status.message = 'No Match. Conceal cards.';
-            status.args = cardSelection;
-          }
-          else {
-            revealedCards += 2;
-            if (revealedCards == this.cards.length) {
-              // Game over
-              this.isGameOver = true;
-              revealedCards = 0;
-              revealedValues = [];
-              status.code = 4,
-              status.message = 'GAME OVER! Attempts: ' + this.attempts +
-                  ', Mistakes: ' + this.mistakes;
-            }
-            else {
-              status.code = 2,
-              status.message = 'Match.';
-            }
-          }
-          cardSelection = [];
-        }
-        else {
-          status.code = 1,
-          status.message = 'Flip first card.';
-        }
-      }
-      else {
-        status.code = 0,
-        status.message = 'Card is already facing up.';
-      }
-
+    if (this.cards[index].isRevealed) {
+      status.code = 0;
+      status.message = 'Card is already facing up.';
       return status;
+    }
 
-    };
-  })()
+    this.cards[index].reveal();
+    this._cardSelection.push(index);
+
+    if (this._cardSelection.length === 2) {
+      this.attempts++;
+      var idx0 = this._cardSelection[0];
+      var idx1 = this._cardSelection[1];
+      var v0 = this.cards[idx0].value;
+      var v1 = this.cards[idx1].value;
+
+      var isMatch = (this.currentRule === 'even_odd')
+        ? (v0 % 2 === v1 % 2)
+        : (v0 === v1);
+
+      if (!isMatch) {
+        this.cards[idx0].conceal();
+        this.cards[idx1].conceal();
+
+        // Mistake = at least one of the cards was seen before in a failed attempt
+        var isMistake = false;
+        if (this._revealedValues.indexOf(v0) === -1) {
+          this._revealedValues.push(v0);
+        } else {
+          isMistake = true;
+        }
+        if (this._revealedValues.indexOf(v1) === -1) {
+          this._revealedValues.push(v1);
+        }
+        if (isMistake) {
+          this.mistakes++;
+        }
+
+        status.code = 3;
+        status.message = 'No match. Conceal cards.';
+        status.args = [idx0, idx1];
+
+      } else {
+        this._revealedCards += 2;
+
+        if (this._revealedCards === this.cards.length) {
+          this.isGameOver = true;
+          status.code = 4;
+          status.message = 'Stage complete!';
+        } else {
+          status.code = 2;
+          status.message = 'Match.';
+        }
+      }
+
+      this._cardSelection = [];
+
+    } else {
+      status.code = 1;
+      status.message = 'Flip first card.';
+    }
+
+    return status;
+  }
 
 };

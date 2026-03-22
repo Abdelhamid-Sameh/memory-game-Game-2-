@@ -9,38 +9,47 @@
     <link href="css/MemoryGame.css" type="text/css" rel="stylesheet" />
   </head>
   <body>
-    <section id="memory--settings-modal" class="valign-table modal show">
+
+    <!-- Start screen -->
+    <section id="memory--start-modal" class="valign-table modal show">
       <div class="valign-cell">
-        <form>
-          <h2 class="memory--settings-label">Difficulty level:</h2>
-          <select id="memory--settings-grid">
-            <option value="2x3">Easy</option>
-            <option value="3x4" selected>Medium</option>
-            <option value="4x5">Hard</option>
-            <option value="5x6">Don't do it!</option>
-          </select>
-          <input id="memory--settings-reset" type="submit" value="Start New Game" />
-        </form>
-      </div>
-    </section>
-    <section id="memory--end-game-modal" class="valign-table modal">
-      <div class="valign-cell">
-        <div class="wrapper">
-          <h2 id="memory--end-game-message"></h2>
-          <h3 id="memory--end-game-score"></h3>
+        <div class="memory--modal-box">
+          <h2>Number Matcher</h2>
+          <p class="memory--rule-intro">
+            Match cards with <strong>identical numbers</strong>.
+          </p>
+          <p class="memory--rule-sub">
+            You will play 3 rounds before the rules change.
+          </p>
+          <button id="memory--start-btn" class="memory--modal-btn">Start</button>
         </div>
       </div>
     </section>
-    <section id="memory--app-container">
-      <ul id="memory--cards">
-      </ul>
-    </section>
-    <section class="memory--menu-bar">
-      <div class="inner">
-        <div class="left"><h1 class="memory--app-name">Fruit Matcher</h1></div>
-        <div class="right"><a href="#settings"><img id="memory--settings-icon" src="images/gear.png" /></a></div>
+
+    <!-- Transition screen (stage complete / rule change / session end) -->
+    <section id="memory--transition-modal" class="valign-table modal">
+      <div class="valign-cell">
+        <div class="memory--modal-box">
+          <h2 id="memory--transition-title"></h2>
+          <p id="memory--transition-message"></p>
+          <button id="memory--transition-btn" class="memory--modal-btn">Continue</button>
+        </div>
       </div>
     </section>
+
+    <!-- Game area -->
+    <section id="memory--app-container">
+      <ul id="memory--cards"></ul>
+    </section>
+
+    <!-- Menu bar -->
+    <section class="memory--menu-bar">
+      <div class="inner">
+        <div class="left"><h1 class="memory--app-name">Number Matcher</h1></div>
+        <div class="right"><span id="memory--stage-label" class="memory--stage-label"></span></div>
+      </div>
+    </section>
+
     <script src="js/BrowserInterface.js" type="text/javascript"></script>
   </body>
 </html>

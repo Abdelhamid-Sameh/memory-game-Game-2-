@@ -1,185 +1,206 @@
 /**
- * Author: Maximo Mena
- * GitHub: mmenavas
- * Twitter: @menamaximo
- * Project: Memory Workout
- * Description: The game interface
- */
-
-/**
- * @TODO Refactor code.
+ * BrowserInterface.js
+ * Session flow: Easy → Medium → Hard → [Rule Change] → Medium (Parity)
  */
 (function($) {
 
-  /************ Start hard coded settings ******************/
-
-  // How long a non matching card is displayed once clicked.
   var nonMatchingCardTime = 1000;
+  var isProcessing = false;
 
-  // Shuffle card images: How many different images are available to shuffle
-  // from?
-  var imagesAvailable = 15;
+  var SESSION_STAGES = [
+    { rows: 2, columns: 3, rule: 'identical', label: 'Round 1 — Easy'   },
+    { rows: 3, columns: 4, rule: 'identical', label: 'Round 2 — Medium' },
+    { rows: 4, columns: 5, rule: 'identical', label: 'Round 3 — Hard'   },
+    { rows: 3, columns: 4, rule: 'even_odd',  label: 'Round 4 — Parity' },
+  ];
 
-  /************ End hard coded settings ******************/
+  var currentStageIndex = -1;
+  var pendingAction = null;
 
-  // Handle clicking on settings icon
-  var settings = document.getElementById('memory--settings-icon');
-  var modal = document.getElementById('memory--settings-modal');
-  var handleOpenSettings = function (event) {
-    event.preventDefault();
-    modal.classList.toggle('show');
-  };
-  settings.addEventListener('click', handleOpenSettings);
+  // DOM refs
+  var startModal      = document.getElementById('memory--start-modal');
+  var transitionModal = document.getElementById('memory--transition-modal');
+  var transitionTitle = document.getElementById('memory--transition-title');
+  var transitionMsg   = document.getElementById('memory--transition-message');
+  var transitionBtn   = document.getElementById('memory--transition-btn');
+  var stageLabel      = document.getElementById('memory--stage-label');
 
-  // Handle settings form submission
-  var reset = document.getElementById('memory--settings-reset');
-  var handleSettingsSubmission = function (event) {
-    event.preventDefault();
+  // ── Start button ────────────────────────────────────────────────────────────
+  document.getElementById('memory--start-btn').addEventListener('click', function(e) {
+    e.preventDefault();
+    startModal.classList.remove('show');
+    currentStageIndex = 0;
+    startCurrentStage();
+  });
 
-    var selectWidget = document.getElementById("memory--settings-grid").valueOf();
-    var grid = selectWidget.options[selectWidget.selectedIndex].value;
-    var gridValues = grid.split('x');
-    var cards = $.initialize(Number(gridValues[0]), Number(gridValues[1]), imagesAvailable);
-
-    if (cards) {
-      document.getElementById('memory--settings-modal').classList.remove('show');
-      document.getElementById('memory--end-game-modal').classList.remove('show');
-      document.getElementById('memory--end-game-message').innerText = "";
-      document.getElementById('memory--end-game-score').innerText = "";
-      buildLayout($.cards, $.settings.rows, $.settings.columns);
+  // ── Transition / continue button ─────────────────────────────────────────────
+  transitionBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    transitionModal.classList.remove('show');
+    if (pendingAction) {
+      var action = pendingAction;
+      pendingAction = null;
+      action();
     }
+  });
 
-  };
-  reset.addEventListener('click', handleSettingsSubmission);
-
-  // Handle clicking on card
-  var handleFlipCard = function (event) {
-
-    event.preventDefault();
-
-    var status = $.play(this.index);
-    console.log(status);
-
-    if (status.code != 0 ) {
-      this.classList.toggle('clicked');
-    }
-
-    if (status.code == 3 ) {
-      setTimeout(function () {
-        var childNodes = document.getElementById('memory--cards').childNodes;
-        childNodes[status.args[0]].classList.remove('clicked');
-        childNodes[status.args[1]].classList.remove('clicked');
-      }.bind(status), nonMatchingCardTime);
-    }
-    else if (status.code == 4) {
-      var score = parseInt((($.attempts - $.mistakes) / $.attempts) * 100, 10);
-      var message = getEndGameMessage(score);
-
-      document.getElementById('memory--end-game-message').textContent = message;
-      document.getElementById('memory--end-game-score').textContent =
-          'Score: ' + score + ' / 100';
-
-      document.getElementById("memory--end-game-modal").classList.toggle('show');
-    }
-
-  };
-
-  var getEndGameMessage = function(score) {
-    var message = "";
-
-    if (score == 100) {
-      message = "Amazing job!"
-    }
-    else if (score >= 70 ) {
-      message = "Great job!"
-    }
-    else if (score >= 50) {
-      message = "Great job!"
-    }
-    else {
-      message = "You can do better.";
-    }
-
-    return message;
+  // ── Stage helpers ────────────────────────────────────────────────────────────
+  function startCurrentStage() {
+    var stage = SESSION_STAGES[currentStageIndex];
+    stageLabel.textContent = stage.label;
+    $.initialize(stage.rows, stage.columns, stage.rule);
+    buildLayout($.cards, $.settings.rows, $.settings.columns);
+    isProcessing = false;
   }
 
-  // Build grid of cards
-  var buildLayout = function (cards, rows, columns) {
-    if (!cards.length) {
+  function showTransition(title, message, btnText, onContinue) {
+    transitionTitle.textContent = title;
+    transitionMsg.textContent   = message;
+    if (btnText) {
+      transitionBtn.textContent    = btnText;
+      transitionBtn.style.display  = '';
+    } else {
+      transitionBtn.style.display  = 'none';
+    }
+    pendingAction = onContinue;
+    transitionModal.classList.add('show');
+  }
+
+  function onStageComplete() {
+    var nextIndex = currentStageIndex + 1;
+
+    if (nextIndex >= SESSION_STAGES.length) {
+      // All rounds finished
+      showTransition(
+        'Session Complete!',
+        'All rounds are finished. Thank you for participating.',
+        null,
+        null
+      );
+      stageLabel.textContent = '';
       return;
     }
 
-    var memoryCards = document.getElementById("memory--cards");
-    var index = 0;
+    if (nextIndex === 3) {
+      // Rule-change screen before the parity round
+      showTransition(
+        'Rule Change!',
+        'From now on, match EVEN numbers with EVEN and ODD numbers with ODD. No two cards will share the same number.',
+        'Got it — let\'s go!',
+        function() {
+          currentStageIndex = 3;
+          startCurrentStage();
+        }
+      );
+    } else {
+      showTransition(
+        'Round Complete!',
+        'Well done! Get ready for the next round.',
+        'Continue',
+        function() {
+          currentStageIndex = nextIndex;
+          startCurrentStage();
+        }
+      );
+    }
+  }
 
-    var cardMaxWidth = document.getElementById('memory--app-container').offsetWidth / columns;
+  // ── Card click handler ───────────────────────────────────────────────────────
+  var handleFlipCard = function(event) {
+    event.preventDefault();
+    if (isProcessing) return;
+
+    var status = $.play(this.index);
+
+    if (status.code !== 0) {
+      this.classList.toggle('clicked');
+    }
+
+    if (status.code === 3) {
+      isProcessing = true;
+      var args = status.args;
+      setTimeout(function() {
+        var childNodes = document.getElementById('memory--cards').childNodes;
+        childNodes[args[0]].classList.remove('clicked');
+        childNodes[args[1]].classList.remove('clicked');
+        isProcessing = false;
+      }, nonMatchingCardTime);
+
+    } else if (status.code === 4) {
+      isProcessing = true;
+      setTimeout(function() {
+        onStageComplete();
+      }, 500);
+    }
+  };
+
+  // ── Layout builders ──────────────────────────────────────────────────────────
+  var buildLayout = function(cards, rows, columns) {
+    if (!cards.length) return;
+
+    var memoryCards = document.getElementById('memory--cards');
+
+    var cardMaxWidth          = document.getElementById('memory--app-container').offsetWidth / columns;
     var cardHeightForMaxWidth = cardMaxWidth * (3 / 4);
-
-    var cardMaxHeight = document.getElementById('memory--app-container').offsetHeight / rows;
+    var cardMaxHeight         = document.getElementById('memory--app-container').offsetHeight / rows;
     var cardWidthForMaxHeight = cardMaxHeight * (4 / 3);
 
-    // Clean up. Remove all child nodes and card clicking event listeners.
+    // Remove existing cards and their listeners
     while (memoryCards.firstChild) {
       memoryCards.firstChild.removeEventListener('click', handleFlipCard);
       memoryCards.removeChild(memoryCards.firstChild);
     }
 
+    var index = 0;
     for (var i = 0; i < rows; i++) {
       for (var j = 0; j < columns; j++) {
-        // Use cloneNode(true) otherwise only one node is appended
-        memoryCards.appendChild(buildCardNode(index, cards[index],
-          (100 / columns) + "%", (100 / rows) + "%"));
+        memoryCards.appendChild(
+          buildCardNode(index, cards[index], (100 / columns) + '%', (100 / rows) + '%')
+        );
         index++;
       }
     }
 
-    // Resize cards to fit in viewport
     if (cardMaxHeight > cardHeightForMaxWidth) {
-      // Update height
-      memoryCards.style.height = (cardHeightForMaxWidth * rows) + "px";
-      memoryCards.style.width = document.getElementById('memory--app-container').offsetWidth + "px";
-      memoryCards.style.top = ((cardMaxHeight * rows - (cardHeightForMaxWidth * rows)) / 2) + "px";
+      memoryCards.style.height = (cardHeightForMaxWidth * rows) + 'px';
+      memoryCards.style.width  = document.getElementById('memory--app-container').offsetWidth + 'px';
+      memoryCards.style.top    = ((cardMaxHeight * rows - cardHeightForMaxWidth * rows) / 2) + 'px';
+    } else {
+      memoryCards.style.width  = (cardWidthForMaxHeight * columns) + 'px';
+      memoryCards.style.height = document.getElementById('memory--app-container').offsetHeight + 'px';
+      memoryCards.style.top    = 0;
     }
-    else {
-      // Update Width
-      memoryCards.style.width = (cardWidthForMaxHeight * columns) + "px";
-      memoryCards.style.height = document.getElementById('memory--app-container').offsetHeight + "px";
-      memoryCards.style.top = 0;
-    }
-
   };
 
-  // Update on resize
   window.addEventListener('resize', function() {
-    buildLayout($.cards, $.settings.rows, $.settings.columns);
+    if (currentStageIndex >= 0) {
+      buildLayout($.cards, $.settings.rows, $.settings.columns);
+    }
   }, true);
 
-  // Build single card
-  var buildCardNode = function (index, card, width, height) {
-    var flipContainer = document.createElement("li");
-    var flipper = document.createElement("div");
-    var front = document.createElement("a");
-    var back = document.createElement("a");
+  var buildCardNode = function(index, card, width, height) {
+    var flipContainer = document.createElement('li');
+    var flipper       = document.createElement('div');
+    var front         = document.createElement('a');
+    var back          = document.createElement('a');
 
-    flipContainer.index = index;
-    flipContainer.style.width = width;
+    flipContainer.index        = index;
+    flipContainer.style.width  = width;
     flipContainer.style.height = height;
-    flipContainer.classList.add("flip-container");
-    if (card.isRevealed) {
-      flipContainer.classList.add("clicked");
-    }
+    flipContainer.classList.add('flip-container');
+    if (card.isRevealed) flipContainer.classList.add('clicked');
 
-    flipper.classList.add("flipper");
-    front.classList.add("front");
-    front.setAttribute("href", "#");
-    back.classList.add("back");
-    if (card.isMatchingCard) {
-      back.classList.add("matching");
-    }
-    back.setAttribute("href", "#");
+    flipper.classList.add('flipper');
 
-    var cardNumber = document.createElement("span");
-    cardNumber.classList.add("card-number");
+    front.classList.add('front');
+    front.setAttribute('href', '#');
+
+    back.classList.add('back');
+    if (card.isMatchingCard) back.classList.add('matching');
+    back.setAttribute('href', '#');
+
+    var cardNumber = document.createElement('span');
+    cardNumber.classList.add('card-number');
     cardNumber.textContent = card.value;
     back.appendChild(cardNumber);
 
