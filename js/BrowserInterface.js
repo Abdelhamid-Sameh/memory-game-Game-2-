@@ -40,6 +40,12 @@
   var currentStageIndex = -1;
   var pendingAction = null;
 
+  // ── Event log ────────────────────────────────────────────────────────────────
+  var game2Log = [];
+  var flipId = 0;
+  var pairAttemptId = 0;
+  var firstFlipTimestamp = null;
+
   // DOM refs
   var startModal = document.getElementById("memory--start-modal");
   var transitionModal = document.getElementById("memory--transition-modal");
@@ -78,11 +84,23 @@
 
     // Timed reveal: show all cards face-up briefly, then hide them
     isProcessing = true;
+    var revealStart = Date.now();
+    game2Log.push({
+      event_type: "reveal_start",
+      round: currentStageIndex + 1,
+      timestamp: revealStart,
+    });
+
     var childNodes = document.getElementById("memory--cards").childNodes;
     for (var i = 0; i < childNodes.length; i++) {
       childNodes[i].classList.add("clicked");
     }
     setTimeout(function () {
+      game2Log.push({
+        event_type: "reveal_end",
+        round: currentStageIndex + 1,
+        timestamp: Date.now(),
+      });
       var nodes = document.getElementById("memory--cards").childNodes;
       for (var i = 0; i < nodes.length; i++) {
         nodes[i].classList.remove("clicked");
@@ -108,7 +126,8 @@
     var nextIndex = currentStageIndex + 1;
 
     if (nextIndex >= SESSION_STAGES.length) {
-      // All rounds finished
+      // All rounds finished — persist the log
+      sessionStorage.setItem("game2_log", JSON.stringify(game2Log));
       showTransition(
         "Session Complete!",
         "All rounds are finished. Thank you for participating.",
@@ -148,11 +167,47 @@
     event.preventDefault();
     if (isProcessing) return;
 
-    var status = $.play(this.index);
+    var flipTimestamp = Date.now();
+    var cardIndex = this.index;
+    var status = $.play(cardIndex);
 
-    if (status.code !== 0) {
-      this.classList.toggle("clicked");
+    if (status.code === 0) return; // already revealed — ignore
+
+    this.classList.toggle("clicked");
+
+    // ── Log this flip ──────────────────────────────────────────────────────────
+    flipId++;
+    var flipInPair, matchResult, timeBetweenFlips;
+
+    if (status.code === 1) {
+      // First card of a pair
+      pairAttemptId++;
+      flipInPair = 1;
+      matchResult = null;
+      timeBetweenFlips = null;
+      firstFlipTimestamp = flipTimestamp;
+    } else {
+      // Second card of a pair (codes 2, 3, 4)
+      flipInPair = 2;
+      matchResult = (status.code === 2 || status.code === 4) ? "correct" : "incorrect";
+      timeBetweenFlips = flipTimestamp - firstFlipTimestamp;
+      firstFlipTimestamp = null;
     }
+
+    game2Log.push({
+      event_type: "flip",
+      flip_id: flipId,
+      timestamp: flipTimestamp,
+      round: currentStageIndex + 1,
+      card_value: $.cards[cardIndex].value,
+      pair_attempt_id: pairAttemptId,
+      flip_in_pair: flipInPair,
+      current_rule: $.currentRule,
+      post_switch: currentStageIndex === 3,
+      match_result: matchResult,
+      time_between_flips_ms: timeBetweenFlips,
+    });
+    // ──────────────────────────────────────────────────────────────────────────
 
     if (status.code === 3) {
       isProcessing = true;
