@@ -1,6 +1,6 @@
 /**
  * BrowserInterface.js
- * Session flow: Easy → Medium → Hard → [Rule Change] → Medium (Parity)
+ * Session flow: Easy → Medium → Hard → [Rule Change] → Sum-to-Target
  */
 (function ($) {
   var nonMatchingCardTime = 1000;
@@ -31,8 +31,8 @@
     {
       rows: 4,
       columns: 5,
-      rule: "even_odd",
-      label: "Round 4 — Parity",
+      rule: "sum_target",
+      label: "Round 4 — Sum",
       revealTime: 3000,
     },
   ];
@@ -46,6 +46,9 @@
   var pairAttemptId = 0;
   var firstFlipTimestamp = null;
 
+  // ── Pause state ───────────────────────────────────────────────────────────────
+  var isPaused = false;
+
   // DOM refs
   var startModal = document.getElementById("memory--start-modal");
   var transitionModal = document.getElementById("memory--transition-modal");
@@ -53,6 +56,8 @@
   var transitionMsg = document.getElementById("memory--transition-message");
   var transitionBtn = document.getElementById("memory--transition-btn");
   var stageLabel = document.getElementById("memory--stage-label");
+  var pauseBtn   = document.getElementById("memory--pause-btn");
+  var pauseModal = document.getElementById("memory--pause-modal");
 
   // ── Start button ────────────────────────────────────────────────────────────
   document
@@ -75,12 +80,38 @@
     }
   });
 
+  // ── Pause / Resume ───────────────────────────────────────────────────────────
+  function togglePause() {
+    if (isPaused) {
+      isPaused = false;
+      pauseBtn.innerHTML = "&#9646;&#9646;&nbsp;Pause";
+      pauseModal.classList.remove("show");
+    } else {
+      isPaused = true;
+      pauseBtn.innerHTML = "&#9654;&nbsp;Resume";
+      pauseModal.classList.add("show");
+    }
+  }
+
+  // Expose to inline onclick on the pause modal button
+  window.togglePause = togglePause;
+
+  // Keyboard shortcut: Escape or P
+  document.addEventListener("keydown", function (e) {
+    if (!pauseBtn.disabled && (e.key === "Escape" || e.key === "p" || e.key === "P")) {
+      togglePause();
+    }
+  });
+
   // ── Stage helpers ────────────────────────────────────────────────────────────
   function startCurrentStage() {
     var stage = SESSION_STAGES[currentStageIndex];
     stageLabel.textContent = stage.label;
     $.initialize(stage.rows, stage.columns, stage.rule);
     buildLayout($.cards, $.settings.rows, $.settings.columns);
+
+    // Enable pause button once a round is active
+    pauseBtn.disabled = false;
 
     // Timed reveal: show all cards face-up briefly, then hide them
     isProcessing = true;
@@ -110,8 +141,12 @@
   }
 
   function showTransition(title, message, btnText, onContinue) {
+    // Disable pause and auto-resume if currently paused
+    pauseBtn.disabled = true;
+    if (isPaused) togglePause();
+
     transitionTitle.textContent = title;
-    transitionMsg.textContent = message;
+    transitionMsg.innerHTML = message;
     if (btnText) {
       transitionBtn.textContent = btnText;
       transitionBtn.style.display = "";
@@ -130,19 +165,19 @@
       sessionStorage.setItem("game2_log", JSON.stringify(game2Log));
       showTransition(
         "Session Complete!",
-        "All rounds are finished. Thank you for participating.",
-        null,
-        null,
+        "All rounds are finished. Thank you for participating.<br><br>Please press <strong>Continue</strong> and wait for the results page to appear — it may take a few seconds. Once it confirms your data has been recorded, it is safe to close the tab.",
+        "Continue \u2192",
+        function () { window.location.href = '../results.html'; },
       );
       stageLabel.textContent = "";
       return;
     }
 
     if (nextIndex === 3) {
-      // Rule-change screen before the parity round
+      // Rule-change screen before the sum round
       showTransition(
         "Rule Change!",
-        "Match EVEN numbers with EVEN and ODD numbers with ODD — but matching two identical numbers is WRONG, even if they share parity.",
+        "New rule: match two cards that <strong>add up to 21</strong>.<br><br>For example, 3 and 18 are a match. Matching identical numbers is no longer correct.",
         "Got it — let's go!",
         function () {
           currentStageIndex = 3;
@@ -172,6 +207,7 @@
     var status = $.play(cardIndex);
 
     if (status.code === 0) return; // already revealed — ignore
+    if (isPaused) return;          // game is paused — ignore all flips
 
     this.classList.toggle("clicked");
 

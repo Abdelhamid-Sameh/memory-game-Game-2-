@@ -146,6 +146,37 @@ body {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+/* ── Pause modal ────────────────────────────────────────────────────────── */
+#memory--pause-modal {
+  background-color: rgba(0, 0, 0, .88);
+  z-index: 4;
+}
+
+/* ── Pause button in menu bar ───────────────────────────────────────────── */
+.memory--pause-btn {
+  background: transparent;
+  color: #aaa;
+  border: 1px solid #555;
+  border-radius: 4px;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  cursor: pointer;
+  vertical-align: middle;
+  margin-right: 10px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.memory--pause-btn:hover:not(:disabled) {
+  color: #eee;
+  border-color: #aaa;
+}
+.memory--pause-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 /* ── Stage label in menu bar ────────────────────────────────────────────── */
 .memory--stage-label {
   color: #aaa;

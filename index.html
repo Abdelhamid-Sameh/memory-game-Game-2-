@@ -1,55 +1,75 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Number Matcher</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="js/MemoryGame.js" type="text/javascript"></script>
-    <script src="js/Card.js" type="text/javascript"></script>
-    <link href="css/MemoryGame.css" type="text/css" rel="stylesheet" />
-  </head>
-  <body>
 
-    <!-- Start screen -->
-    <section id="memory--start-modal" class="valign-table modal show">
-      <div class="valign-cell">
-        <div class="memory--modal-box">
-          <h2>Number Matcher</h2>
-          <p class="memory--rule-intro">
-            Match cards with <strong>identical numbers</strong>.
-          </p>
-          <p class="memory--rule-sub">
-            You will play 3 rounds before the rules change.
-          </p>
-          <button id="memory--start-btn" class="memory--modal-btn">Start</button>
-        </div>
+<head>
+  <meta charset="UTF-8" />
+  <title>Number Matcher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="js/MemoryGame.js" type="text/javascript"></script>
+  <script src="js/Card.js" type="text/javascript"></script>
+  <link href="css/MemoryGame.css" type="text/css" rel="stylesheet" />
+</head>
+
+<body>
+
+  <!-- Start screen -->
+  <section id="memory--start-modal" class="valign-table modal show">
+    <div class="valign-cell">
+      <div class="memory--modal-box">
+        <h2>Number Matcher</h2>
+        <p class="memory--rule-intro">
+          Match cards with <strong>identical numbers</strong>.
+        </p>
+        <p class="memory--rule-sub">
+          You will play 3 rounds before the rules change.
+        </p>
+        <button id="memory--start-btn" class="memory--modal-btn">Start</button>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- Transition screen (stage complete / rule change / session end) -->
-    <section id="memory--transition-modal" class="valign-table modal">
-      <div class="valign-cell">
-        <div class="memory--modal-box">
-          <h2 id="memory--transition-title"></h2>
-          <p id="memory--transition-message"></p>
-          <button id="memory--transition-btn" class="memory--modal-btn">Continue</button>
-        </div>
+  <!-- Transition screen (stage complete / rule change / session end) -->
+  <section id="memory--transition-modal" class="valign-table modal">
+    <div class="valign-cell">
+      <div class="memory--modal-box">
+        <h2 id="memory--transition-title"></h2>
+        <p id="memory--transition-message"></p>
+        <button id="memory--transition-btn" class="memory--modal-btn">Continue</button>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- Game area -->
-    <section id="memory--app-container">
-      <ul id="memory--cards"></ul>
-    </section>
-
-    <!-- Menu bar -->
-    <section class="memory--menu-bar">
-      <div class="inner">
-        <div class="left"><h1 class="memory--app-name">Number Matcher</h1></div>
-        <div class="right"><span id="memory--stage-label" class="memory--stage-label"></span></div>
+  <!-- Pause overlay -->
+  <section id="memory--pause-modal" class="valign-table modal">
+    <div class="valign-cell">
+      <div class="memory--modal-box">
+        <h2>Paused</h2>
+        <p>Take your time.<br />Resume when you are ready.</p>
+        <button class="memory--modal-btn" onclick="togglePause()">&#9654;&nbsp;Resume</button>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <script src="js/BrowserInterface.js" type="text/javascript"></script>
-  </body>
+  <!-- Game area -->
+  <section id="memory--app-container">
+    <ul id="memory--cards"></ul>
+  </section>
+
+  <!-- Menu bar -->
+  <section class="memory--menu-bar">
+    <div class="inner">
+      <div class="left">
+        <h1 class="memory--app-name">Number Matcher</h1>
+      </div>
+      <div class="right">
+        <span id="memory--stage-label" class="memory--stage-label"></span>
+        <button id="memory--pause-btn" class="memory--pause-btn" disabled
+          onclick="togglePause()">&#9646;&#9646;&nbsp;Pause</button>
+      </div>
+    </div>
+  </section>
+
+  <script src="js/BrowserInterface.js" type="text/javascript"></script>
+</body>
+
 </html>

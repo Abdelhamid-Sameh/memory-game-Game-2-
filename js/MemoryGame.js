@@ -10,11 +10,13 @@ var MemoryGame = {
     columns: 3,
   },
 
+  SUM_TARGET: 21, // Round 4 target sum — pairs (1,20),(2,19),...,(10,11)
+
   cards: [],
   attempts: 0,
   mistakes: 0,
   isGameOver: false,
-  currentRule: 'identical', // 'identical' or 'even_odd'
+  currentRule: 'identical', // 'identical' | 'sum_target'
 
   // play() state — stored here so initialize() can reset them between stages
   _cardSelection: [],
@@ -46,8 +48,8 @@ var MemoryGame = {
     this._revealedCards = 0;
     this._revealedValues = [];
 
-    if (this.currentRule === 'even_odd') {
-      this.createParityCards().shuffleCards();
+    if (this.currentRule === 'sum_target') {
+      this.createSumCards(this.SUM_TARGET).shuffleCards();
     } else {
       this.createCards().shuffleCards();
     }
@@ -75,42 +77,40 @@ var MemoryGame = {
   },
 
   /**
-   * Create cards for parity matching.
-   * Half the cards are even, half are odd.
-   * A small number of values are deliberately duplicated ("traps") so that
-   * players tempted to use the old identical-match rule will fail — those
-   * attempts are perseveration errors and are measured by the event log.
-   * A match is valid only when two cards share parity AND have different values.
+   * Create cards for sum-to-target matching (Round 4, target = 21).
+   *
+   * Deck structure (20 cards, 10 pair slots):
+   *   6 unique sum pairs — each value appears exactly once:
+   *     (1,20),(2,19),(5,16),(6,15),(7,14),(8,13)
+   *   2 duplicate sum pairs — each pair appears twice in the deck:
+   *     (3,18) × 2  and  (4,17) × 2
+   *
+   * The duplicate pairs are the perseveration traps: the deck contains two 3s,
+   * two 18s, two 4s, and two 17s. The correct match is still 3+18=21 / 4+17=21,
+   * but a participant applying the old identical-match rule will try to flip (3,3),
+   * (18,18), (4,4), or (17,17) — those are unambiguous perseveration errors.
+   * Every card has a valid sum partner, so the round can always be completed.
+   *
+   * Values 3, 4, 17, 18 appear ONLY in the duplicate pairs — not in the unique
+   * pairs — so trap flips are unambiguous.
    */
-  createParityCards: function() {
-    var totalCards = this.settings.columns * this.settings.rows;
-    var half = totalCards / 2; // even cards = odd cards = half
-
-    var evensPool = this.shuffleArray([2, 4, 6, 8, 10, 12, 14, 16, 18, 20].slice());
-    var oddsPool  = this.shuffleArray([1, 3, 5, 7,  9, 11, 13, 15, 17, 19].slice());
-
-    // Start with 'half' unique values for each parity
-    var evens = evensPool.slice(0, half);
-    var odds  = oddsPool.slice(0, half);
-
-    // Introduce traps: duplicate some values so the identical-match temptation exists.
-    // Replace the last numTraps entries with copies of the first numTraps values.
-    var numTraps = Math.max(1, Math.floor(half / 5)); // e.g. 2 for half=10
-    for (var i = 0; i < numTraps; i++) {
-      evens[half - 1 - i] = evens[i];
-      odds[half - 1 - i]  = odds[i];
-    }
-
-    // Shuffle again so traps are at random positions
-    evens = this.shuffleArray(evens);
-    odds  = this.shuffleArray(odds);
-
-    var allValues = evens.concat(odds);
+  createSumCards: function(target) {
     var cards = [];
-    for (var i = 0; i < allValues.length; i++) {
-      cards.push(new this.Card(allValues[i]));
+    // 6 unique sum pairs — values appear exactly once
+    var uniquePairs = [[1,20],[2,19],[5,16],[6,15],[7,14],[8,13]];
+    for (var i = 0; i < uniquePairs.length; i++) {
+      cards.push(new this.Card(uniquePairs[i][0]));
+      cards.push(new this.Card(uniquePairs[i][1]));
     }
-
+    // 2 duplicate trap pairs — each appears twice (4 cards per trap pair)
+    // Correct: 3+18=21, 4+17=21. Trap: flipping (3,3),(18,18),(4,4),(17,17)
+    var trapPairs = [[3,18],[4,17]];
+    for (var i = 0; i < trapPairs.length; i++) {
+      cards.push(new this.Card(trapPairs[i][0]));
+      cards.push(new this.Card(trapPairs[i][1]));
+      cards.push(new this.Card(trapPairs[i][0]));
+      cards.push(new this.Card(trapPairs[i][1]));
+    }
     this.cards = cards;
     return this;
   },
@@ -187,9 +187,8 @@ var MemoryGame = {
       var v0 = this.cards[idx0].value;
       var v1 = this.cards[idx1].value;
 
-      // even_odd: same parity AND different value (identical matches are wrong)
-      var isMatch = (this.currentRule === 'even_odd')
-        ? (v0 % 2 === v1 % 2 && v0 !== v1)
+      var isMatch = (this.currentRule === 'sum_target')
+        ? (v0 + v1 === this.SUM_TARGET)
         : (v0 === v1);
 
       if (!isMatch) {
